@@ -1,7 +1,7 @@
 package com.vann.howold.util;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.util.Log;
 
 import com.facepp.error.FaceppParseException;
 import com.facepp.http.HttpRequests;
@@ -18,29 +18,38 @@ import java.io.ByteArrayOutputStream;
  */
 public class DetectedUtil  {
 
+    public static final String TAG="DetectedUtil";
 
     public interface CallBackListener{
         void onSuccess(JSONObject jsonObject);
         void onError(FaceppParseException e);
     }
 
-    public static void detected(Bitmap bitmap,CallBackListener listener){
-        try {
-            HttpRequests requests  = new HttpRequests(FaceConstant.KEY,FaceConstant.SECRET,true,true);
-            Bitmap bm = Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight());
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            bm.compress(Bitmap.CompressFormat.JPEG,100,bos);
-            PostParameters params = new PostParameters();
-            params.setImg(bos.toByteArray());
-            JSONObject json =requests.detectionDetect(params);
-            if(listener != null ){
-                listener.onSuccess(json);
+    public static void detected(final Bitmap bitmap,final CallBackListener listener){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    HttpRequests requests  = new HttpRequests(FaceConstant.Key,FaceConstant.Secret,true,true);
+                    Bitmap bm = Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight());
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    bm.compress(Bitmap.CompressFormat.JPEG,100,bos);
+                    byte[] array = bos.toByteArray();
+                    PostParameters params = new PostParameters();
+                    params.setImg(array);
+                    JSONObject json =requests.detectionDetect(params);
+                    Log.e(TAG,"Messaage:---"+json.toString());
+                    if(listener != null ){
+                        listener.onSuccess(json);
+                    }
+                } catch (FaceppParseException e) {
+                        e.printStackTrace();
+                        Log.e(TAG,"Error:---"+e.getErrorMessage());
+                        if(listener != null){
+                        listener.onError(e);
+                    }
+                }
             }
-        } catch (FaceppParseException e) {
-            if(listener != null){
-                listener.onError(e);
-            }
-            e.printStackTrace();
-        }
+        }).start();
     }
 }
